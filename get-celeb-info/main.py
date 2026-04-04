@@ -8,7 +8,7 @@ os.environ["PYTHONHTTPSVERIFY"] = "0"
 import httpx
 import requests
 import requests.adapters
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
@@ -23,7 +23,7 @@ def patched_send(self, *args, **kwargs):
     return original_send(self, *args, **kwargs)
 requests.adapters.HTTPAdapter.send = patched_send
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 def main():
     celeb = input("enter a celeb name :")
@@ -41,8 +41,6 @@ Provide:
 2. One bad thing about {celeb}""")
     
     # ✅ Custom httpx client disables SSL check for Groq's API calls
-    http_client = httpx.Client(verify=False)
-
     with httpx.Client(verify=False) as http_client:
         llm = ChatGroq(model="llama-3.3-70b-versatile", http_client=http_client)  # or "llama3-70b-8192" for smarter model
         chain = prompt_template | llm | StrOutputParser()
