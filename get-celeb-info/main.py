@@ -1,27 +1,15 @@
-import ssl
+import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # go up to parent
 
-# Bypass SSL verification for corporate proxy networks
-ssl._create_default_https_context = ssl._create_unverified_context
-os.environ["PYTHONHTTPSVERIFY"] = "0"
+from utils.ssl_fix import apply_ssl_fix, get_http_client   
+apply_ssl_fix()                                                
 
-import httpx
-import requests
-import requests.adapters
 from dotenv import load_dotenv, find_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.utilities import WikipediaAPIWrapper
-
-requests.packages.urllib3.disable_warnings()
-
-# Patch requests globally
-original_send = requests.adapters.HTTPAdapter.send
-def patched_send(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return original_send(self, *args, **kwargs)
-requests.adapters.HTTPAdapter.send = patched_send
 
 load_dotenv(find_dotenv())
 
@@ -41,7 +29,7 @@ Provide:
 2. One bad thing about {celeb}""")
     
     # ✅ Custom httpx client disables SSL check for Groq's API calls
-    with httpx.Client(verify=False) as http_client:
+    with get_http_client() as http_client:
         llm = ChatGroq(model="llama-3.3-70b-versatile", http_client=http_client)  # or "llama3-70b-8192" for smarter model
         chain = prompt_template | llm | StrOutputParser()
         result = chain.invoke({"celeb": celeb, "info": info})
